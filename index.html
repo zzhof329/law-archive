@@ -186,7 +186,19 @@ footer{margin:34px 0 20px;color:var(--sub);font-size:12px;border-top:1px solid v
 .rules dt{font-weight:700;color:var(--accent);font-size:14px}
 .rules dd{margin:0;font-size:14.5px}
 .thtable{min-width:420px}
-@media (max-width:640px){ .rules{grid-template-columns:minmax(0,1fr);gap:2px} .rules dd{margin-bottom:8px} }@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+@media (max-width:640px){ .rules{grid-template-columns:minmax(0,1fr);gap:2px} .rules dd{margin-bottom:8px} }.pflow{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:14px;counter-reset:ps}
+.pstep{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--steel);border-radius:10px;padding:12px 13px;display:flex;flex-direction:column;gap:4px}
+.pstep.opt{border-top-color:var(--accent);border-style:dashed;border-top-style:solid}
+.pstep.done{border-top-color:var(--ok)}
+.pstep .pno{font-family:var(--f-mono);font-size:11.5px;color:var(--sub);letter-spacing:.04em}
+.pstep b{font-family:var(--f-display);font-size:15.5px}
+.pstep .ptime{align-self:flex-start;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 7px}
+.pstep p{margin:2px 0 0;font-size:13px;color:var(--sub)}
+.ptable{min-width:620px}
+.ptips{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.ptip{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 13px}
+.ptip b{font-family:var(--f-display);font-size:14.5px}
+.ptip p{margin:4px 0;font-size:13.5px}@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
 </style>
 
 </head>
@@ -224,6 +236,8 @@ footer{margin:34px 0 20px;color:var(--sub);font-size:12px;border-top:1px solid v
 <script src="data/items_extra.js"></script>
 <script src="data/themes.js"></script>
 <script src="data/manual.js"></script>
+<script src="data/permit_items.js"></script>
+<script src="data/permit.js"></script>
 <script src="data/site.js"></script>
 <script src="data/status.js"></script>
 <script>
@@ -234,7 +248,7 @@ const LKEY = "steelLawHelper.web.v1";
 const TYPES = ["신설","증축","개축","합리화"];
 const ST = [["","미확인"],["ok","확인완료"],["fix","보완필요"],["na","해당없음"]];
 const STAGES = window.STAGES||[], CONDS = window.CONDITIONS||[], STATUS = window.LAW_STATUS||null, PATCH = window.LAW_PATCH||{};
-const TABS = ["home"].concat(STAGES.map(s=>s.key), ["theme","status","quick"]);
+const TABS = ["home"].concat(STAGES.map(s=>s.key), ["permit","theme","status","quick"]);
 const $ = s => document.querySelector(s);
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const hash = s => { let h=5381; for (let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return h.toString(36); };
@@ -359,8 +373,8 @@ function render(){
   }
   const items=allItems();
   $("#tabs").innerHTML = `<button class="tab ${tab==="home"?"on":""}" data-tab="home" role="tab">홈</button>` + STAGES.map(s=>{ const l=items.filter(it=>it.s===s.key&&applies(it,p)); return `<button class="tab ${tab===s.key?"on":""}" data-tab="${s.key}" role="tab">${s.label}<span class="cnt">${l.filter(it=>done(p,it.id)).length}/${l.length}</span></button>`; }).join("")
-    + `<button class="tab ${tab==="theme"?"on":""}" data-tab="theme" role="tab">테마별 법규</button><button class="tab ${tab==="status"?"on":""}" data-tab="status" role="tab">개정 현황</button><button class="tab ${tab==="quick"?"on":""}" data-tab="quick" role="tab">바로가기·관리</button>`;
-  if (tab==="home") renderHome(); else if (tab==="theme") renderTheme(); else if (tab==="status") renderStatus(); else if (tab==="quick") renderQuick(); else renderStage();
+    + `<button class="tab ${tab==="permit"?"on":""}" data-tab="permit" role="tab">인허가</button><button class="tab ${tab==="theme"?"on":""}" data-tab="theme" role="tab">테마별 법규</button><button class="tab ${tab==="status"?"on":""}" data-tab="status" role="tab">개정 현황</button><button class="tab ${tab==="quick"?"on":""}" data-tab="quick" role="tab">바로가기·관리</button>`;
+  if (tab==="home") renderHome(); else if (tab==="permit") renderPermit(); else if (tab==="theme") renderTheme(); else if (tab==="status") renderStatus(); else if (tab==="quick") renderQuick(); else renderStage();
 }
 function renderHome(){
   const p=P(), items=allItems();
@@ -435,6 +449,25 @@ function itemHtml(it,p){
       ${editable?`<button class="btn sm" data-edit="${it.id}">수정</button><button class="btn sm danger" data-delc="${it.id}">삭제</button>`:""}</div>
       <textarea class="memo" data-memo="${it.id}" rows="1" placeholder="검토 메모 (도면번호, 협의 결과, 담당자 등)">${esc(r.memo||"")}</textarea></div></div>`;
 }
+function renderPermit(){
+  const D = window.PERMIT || {};
+  const tbl = (head, rows) => `<div class="tablewrap"><table class="ptable"><tr>${head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div>`;
+  let h = `<div class="shead"><div><h2>인허가 업무 플로우</h2><p>${esc(D.lead||"")}</p></div></div>`;
+  if (D.flow) h += `<div class="pflow">${D.flow.map((s,i)=>`<div class="pstep${s.kind?" "+s.kind:""}"><span class="pno">${s.no||("STEP "+(i+1))}</span><b>${esc(s.name)}</b>${s.time?`<span class="ptime">${esc(s.time)}</span>`:""}<p>${esc(s.desc||"")}</p></div>`).join("")}</div>`;
+  if (D.parallel) h += `<h3 class="cat">필요할 때 함께 진행하는 심의·협의</h3>` + tbl(["구분","대상","기간","언제까지","근거"], D.parallel.map(x=>[x.name,x.target,x.time,x.when,x.law]));
+  if (D.depts) h += `<h3 class="cat">협의 부서별 검토 내용</h3>` + tbl(["협의 부서","검토 내용","준비 서류"], D.depts.map(x=>[x.dept,x.check,x.docs]));
+  if (D.docs) h += `<h3 class="cat">단계별 준비 서류</h3>` + tbl(["단계","협의 부서","서류","내용"], D.docs.map(x=>[x.stage,x.dept,x.doc,x.note]));
+  if (D.struct) h += `<h3 class="cat">특수구조 건축물 구조심의 절차</h3>` + tbl(["업무","서류","내용"], D.struct.map(x=>[x.step,x.doc,x.note]));
+  if (D.items && D.items.length){
+    const groups=[]; D.items.forEach(x=>{ if(!groups.includes(x.group)) groups.push(x.group); });
+    h += `<h3 class="cat">인허가 항목별 대상 기준</h3><p class="small">사업 규모에 따라 필요한 인허가를 판단할 때 참고하세요. 기준값은 개정될 수 있으니 근거 법령으로 확인하세요.</p>`;
+    groups.forEach(g=>{ h += `<p class="small" style="margin:14px 0 4px"><b>${esc(g)}</b></p>` + tbl(["인허가 항목","대상 기준","수행","관련 관청","처리 기간","근거"], D.items.filter(x=>x.group===g).map(x=>[x.name,x.target,x.who||"",x.office||"",x.time||"",x.law||""])); });
+  }
+  if (D.tips) h += `<h3 class="cat">실무 팁</h3><div class="ptips">${D.tips.map(t=>`<div class="ptip"><b>${esc(t.title)}</b><p>${esc(t.body)}</p>${t.law?`<span class="small">${esc(t.law)}</span>`:""}</div>`).join("")}</div>`;
+  h += `<p class="small" style="margin-top:14px">기간은 실무 경험상 소요 기간이며 지자체·사업별로 다를 수 있습니다.</p>`;
+  $("#view").innerHTML = h;
+}
+
 let themeKey = "";
 function renderTheme(){
   const TH = window.THEMES||[]; const p=P();
