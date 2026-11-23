@@ -402,7 +402,7 @@ function renderHome(){
       </ol></div></div>
   </section>`;
 }
-function renderStage(){
+function renderStage(listOnly){
   const stage=STAGES.find(s=>s.key===tab)||STAGES[0]; const p=P(); const all=allItems().filter(it=>it.s===stage.key);
   const appl=all.filter(it=>applies(it,p)), dn=appl.filter(it=>done(p,it.id)).length, fx=appl.filter(it=>((p&&p.status||{})[it.id]||{}).st==="fix").length;
   const pct = appl.length?Math.round(dn/appl.length*100):0; const q=stageQ.trim().toLowerCase();
@@ -412,9 +412,12 @@ function renderStage(){
   let h = `<div class="shead"><div><h2>${esc(stage.label)} 체크리스트</h2><p>${esc(stage.desc)}</p></div>
     <div class="prog"><div class="bar"><i style="width:${pct}%"></i></div><div class="progtxt">해당 ${appl.length}건 중 처리 ${dn}건 · ${pct}%${fx?` · <b style="color:var(--fix)">보완필요 ${fx}</b>`:""}</div></div></div>
     <div class="tools"><input id="stageQ" placeholder="이 단계에서 검색" value="${esc(stageQ)}" aria-label="단계 내 검색"><button class="btn" data-act="add">+ 항목 추가</button><button class="btn" data-act="csv">CSV 저장</button></div>`;
-  if (!shown.length) h += `<div class="empty">표시할 항목이 없습니다.</div>`;
-  cats.forEach(c=>{ h+=`<div class="cat">${esc(c)}</div>`; shown.filter(it=>it.c===c).forEach(it=>h+=itemHtml(it,p)); });
-  $("#view").innerHTML = h;
+  let L = "";
+  if (!shown.length) L += `<div class="empty">표시할 항목이 없습니다.</div>`;
+  cats.forEach(c=>{ L+=`<div class="cat">${esc(c)}</div>`; shown.filter(it=>it.c===c).forEach(it=>L+=itemHtml(it,p)); });
+  const box = $("#stageList");
+  if (listOnly && box) { box.innerHTML = L; return; }
+  $("#view").innerHTML = h + `<div id="stageList">${L}</div>`;
 }
 function itemHtml(it,p){
   const r=((p&&p.status)||{})[it.id]||{}, st=r.st||"", ok=applies(it,p), s=info(it.law);
@@ -562,13 +565,13 @@ document.addEventListener("change", e=>{
   else if (t.id==="projSel"){ cur=t.value; savePrefs(); render(); }
   else if (t.id==="restoreFile" && t.files[0]){ const r=new FileReader(); r.onload=()=>{ try { importBackup(JSON.parse(r.result)); } catch(err){ toast("백업 파일을 읽지 못했습니다"); } }; r.readAsText(t.files[0],"utf-8"); t.value=""; }
 });
-function applyStageQ(t){ stageQ=t.value; const pos=t.selectionStart; renderStage(); const n=$("#stageQ"); n.focus(); n.setSelectionRange(pos,pos); }
+function applyStageQ(t){ if (stageQ===t.value) return; stageQ=t.value; renderStage(true); }
 document.addEventListener("compositionend", e=>{ if (e.target && e.target.id==="stageQ") applyStageQ(e.target); });
 const memoTimers={};
 document.addEventListener("input", e=>{
   const t=e.target, p=P();
   if (t.dataset.memo && p){ const id=t.dataset.memo; p.status=p.status||{}; p.status[id]=Object.assign({},p.status[id],{memo:t.value}); clearTimeout(memoTimers[id]); memoTimers[id]=setTimeout(()=>write(cur,"update",{status:{[id]:{memo:t.value}}}),700); }
-  else if (t.id==="stageQ"){ if (e.isComposing) return; applyStageQ(t); }
+  else if (t.id==="stageQ"){ applyStageQ(t); }
   else if (t.id==="lawQ"){ const q=t.value.trim(); $("#lawGo").href = q ? `${LAW}lsSc.do?menuId=1&subMenuId=15&tabMenuId=81&query=${encodeURIComponent(q)}` : "https://www.law.go.kr/main.html"; }
 });
 $("#lawQ").addEventListener("keydown", e=>{ if (e.key==="Enter"){ e.preventDefault(); $("#lawGo").click(); } });
