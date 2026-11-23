@@ -4,7 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="제철플랜트 신설·증축·합리화 건축 설계검토용 단계별 법규 체크리스트, 테마별 건축법 기준, 국가법령정보센터 현행 조문 링크와 개정 현황">
-<meta name="theme-color" content="#24415f"><title>건축설계 법규 아카이브</title>
+<meta name="theme-color" content="#24415f">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest"><title>건축설계 법규 아카이브</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -220,6 +224,7 @@ footer{margin:34px 0 20px;color:var(--sub);font-size:12px;border-top:1px solid v
 <script src="data/items_extra.js"></script>
 <script src="data/themes.js"></script>
 <script src="data/manual.js"></script>
+<script src="data/site.js"></script>
 <script src="data/status.js"></script>
 <script>
 (function(){
@@ -557,11 +562,13 @@ document.addEventListener("change", e=>{
   else if (t.id==="projSel"){ cur=t.value; savePrefs(); render(); }
   else if (t.id==="restoreFile" && t.files[0]){ const r=new FileReader(); r.onload=()=>{ try { importBackup(JSON.parse(r.result)); } catch(err){ toast("백업 파일을 읽지 못했습니다"); } }; r.readAsText(t.files[0],"utf-8"); t.value=""; }
 });
+function applyStageQ(t){ stageQ=t.value; const pos=t.selectionStart; renderStage(); const n=$("#stageQ"); n.focus(); n.setSelectionRange(pos,pos); }
+document.addEventListener("compositionend", e=>{ if (e.target && e.target.id==="stageQ") applyStageQ(e.target); });
 const memoTimers={};
 document.addEventListener("input", e=>{
   const t=e.target, p=P();
   if (t.dataset.memo && p){ const id=t.dataset.memo; p.status=p.status||{}; p.status[id]=Object.assign({},p.status[id],{memo:t.value}); clearTimeout(memoTimers[id]); memoTimers[id]=setTimeout(()=>write(cur,"update",{status:{[id]:{memo:t.value}}}),700); }
-  else if (t.id==="stageQ"){ stageQ=t.value; const pos=t.selectionStart; renderStage(); const n=$("#stageQ"); n.focus(); n.setSelectionRange(pos,pos); }
+  else if (t.id==="stageQ"){ if (e.isComposing) return; applyStageQ(t); }
   else if (t.id==="lawQ"){ const q=t.value.trim(); $("#lawGo").href = q ? `${LAW}lsSc.do?menuId=1&subMenuId=15&tabMenuId=81&query=${encodeURIComponent(q)}` : "https://www.law.go.kr/main.html"; }
 });
 $("#lawQ").addEventListener("keydown", e=>{ if (e.key==="Enter"){ e.preventDefault(); $("#lawGo").click(); } });
