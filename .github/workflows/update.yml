@@ -1,0 +1,30 @@
+name: 법령 개정 확인
+
+on:
+  schedule:
+    - cron: "30 22 * * *"   # 매일 07:30 (한국시간)
+  workflow_dispatch:        # Actions 탭에서 'Run workflow'로 바로 실행
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 국가법령정보센터 개정 확인
+        run: python scripts/check_updates.py
+
+      - name: 결과 저장
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/status.js data/status.json
+          git diff --cached --quiet || git commit -m "법령 개정정보 갱신 $(TZ=Asia/Seoul date +%F)"
+          git push
