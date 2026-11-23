@@ -195,6 +195,12 @@ footer{margin:34px 0 20px;color:var(--sub);font-size:12px;border-top:1px solid v
 .pstep .ptime{align-self:flex-start;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 7px}
 .pstep p{margin:2px 0 0;font-size:13px;color:var(--sub)}
 .ptable{min-width:620px}
+.psub{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--topH,56px) + 52px);z-index:3}
+@media (max-width:820px){ .psub{top:calc(env(safe-area-inset-top,0px) + 46px)} }
+.pchip{border:1px solid var(--line);border-radius:999px;padding:6px 13px;background:var(--surface2);cursor:pointer;font-size:13.5px;font-weight:600;color:var(--ink);font-family:var(--f-display)}
+.pchip:hover{border-color:var(--steel)}
+.pchip.on{background:var(--steel);border-color:var(--steel);color:var(--steel-ink)}
+.pchip .cnt,.thchip .cnt{font-family:var(--f-mono);font-weight:400;font-size:11.5px;opacity:.75}
 .ptips{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
 .ptip{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 13px}
 .ptip b{font-family:var(--f-display);font-size:14.5px}
@@ -450,21 +456,30 @@ function itemHtml(it,p){
       ${editable?`<button class="btn sm" data-edit="${it.id}">수정</button><button class="btn sm danger" data-delc="${it.id}">삭제</button>`:""}</div>
       <textarea class="memo" data-memo="${it.id}" rows="1" placeholder="검토 메모 (도면번호, 협의 결과, 담당자 등)">${esc(r.memo||"")}</textarea></div></div>`;
 }
+let permitSec = "flow", permitGrp = "";
 function renderPermit(){
   const D = window.PERMIT || {};
   const tbl = (head, rows) => `<div class="tablewrap"><table class="ptable"><tr>${head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div>`;
-  let h = `<div class="shead"><div><h2>인허가 업무 플로우</h2><p>${esc(D.lead||"")}</p></div></div>`;
-  if (D.flow) h += `<div class="pflow">${D.flow.map((s,i)=>`<div class="pstep${s.kind?" "+s.kind:""}"><span class="pno">${s.no||("STEP "+(i+1))}</span><b>${esc(s.name)}</b>${s.time?`<span class="ptime">${esc(s.time)}</span>`:""}<p>${esc(s.desc||"")}</p></div>`).join("")}</div>`;
-  if (D.parallel) h += `<h3 class="cat">필요할 때 함께 진행하는 심의·협의</h3>` + tbl(["구분","대상","기간","언제까지","근거"], D.parallel.map(x=>[x.name,x.target,x.time,x.when,x.law]));
-  if (D.depts) h += `<h3 class="cat">협의 부서별 검토 내용</h3>` + tbl(["협의 부서","검토 내용","준비 서류"], D.depts.map(x=>[x.dept,x.check,x.docs]));
-  if (D.docs) h += `<h3 class="cat">단계별 준비 서류</h3>` + tbl(["단계","협의 부서","서류","내용"], D.docs.map(x=>[x.stage,x.dept,x.doc,x.note]));
-  if (D.struct) h += `<h3 class="cat">특수구조 건축물 구조심의 절차</h3>` + tbl(["업무","서류","내용"], D.struct.map(x=>[x.step,x.doc,x.note]));
-  if (D.items && D.items.length){
+  const SECS = [["flow","업무 흐름도"],["parallel","병행 심의·협의"],["depts","협의 부서"],["docs","준비 서류"],["struct","구조심의 절차"],["items","인허가 항목"],["tips","실무 팁"]].filter(s => D[s[0]] && D[s[0]].length);
+  if (!SECS.some(s=>s[0]===permitSec)) permitSec = SECS.length ? SECS[0][0] : "";
+  let h = `<div class="shead"><div><h2>인허가 업무</h2><p>${esc(D.lead||"")}</p></div></div>
+    <nav class="psub" aria-label="인허가 메뉴">${SECS.map(s=>`<button class="pchip ${permitSec===s[0]?"on":""}" data-psec="${s[0]}">${s[1]}${s[0]==="items"?` <span class="cnt">${D.items.length}</span>`:""}</button>`).join("")}</nav>`;
+  const title = (SECS.find(s=>s[0]===permitSec)||[])[1] || "";
+  h += `<h3 class="cat">${esc(title)}</h3>`;
+  if (permitSec==="flow") h += `<div class="pflow">${D.flow.map((s,i)=>`<div class="pstep${s.kind?" "+s.kind:""}"><span class="pno">${s.no||("STEP "+(i+1))}</span><b>${esc(s.name)}</b>${s.time?`<span class="ptime">${esc(s.time)}</span>`:""}<p>${esc(s.desc||"")}</p></div>`).join("")}</div>
+    <p class="small" style="margin-top:10px">점선 테두리는 대상일 때만 진행하는 단계입니다. 각 꼭지는 위 메뉴에서 바로 볼 수 있습니다.</p>`;
+  else if (permitSec==="parallel") h += tbl(["구분","대상","기간","언제까지","근거"], D.parallel.map(x=>[x.name,x.target,x.time,x.when,x.law]));
+  else if (permitSec==="depts") h += tbl(["협의 부서","검토 내용","준비 서류"], D.depts.map(x=>[x.dept,x.check,x.docs]));
+  else if (permitSec==="docs") h += tbl(["단계","협의 부서","서류","내용"], D.docs.map(x=>[x.stage,x.dept,x.doc,x.note]));
+  else if (permitSec==="struct") h += tbl(["업무","서류","내용"], D.struct.map(x=>[x.step,x.doc,x.note]));
+  else if (permitSec==="items"){
     const groups=[]; D.items.forEach(x=>{ if(!groups.includes(x.group)) groups.push(x.group); });
-    h += `<h3 class="cat">인허가 항목별 대상 기준</h3><p class="small">사업 규모에 따라 필요한 인허가를 판단할 때 참고하세요. 기준값은 개정될 수 있으니 근거 법령으로 확인하세요.</p>`;
-    groups.forEach(g=>{ h += `<p class="small" style="margin:14px 0 4px"><b>${esc(g)}</b></p>` + tbl(["인허가 항목","대상 기준","수행","관련 관청","처리 기간","근거"], D.items.filter(x=>x.group===g).map(x=>[x.name,x.target,x.who||"",x.office||"",x.time||"",x.law||""])); });
+    if (permitGrp && !groups.includes(permitGrp)) permitGrp = "";
+    h += `<div class="thchips" style="margin-top:0">${["", ...groups].map(g=>`<button class="thchip ${permitGrp===g?"on":""}" data-pgrp="${esc(g)}">${g?esc(g):"전체"} <span class="cnt">${g?D.items.filter(x=>x.group===g).length:D.items.length}</span></button>`).join("")}</div>
+      <p class="small" style="margin:8px 0 0">사업 규모에 따라 필요한 인허가를 판단할 때 참고하세요. 기준값은 개정될 수 있으니 근거 법령으로 확인하세요.</p>`;
+    (permitGrp ? [permitGrp] : groups).forEach(g=>{ h += `<p class="small" style="margin:14px 0 4px"><b>${esc(g)}</b></p>` + tbl(["인허가 항목","대상 기준","수행","관련 관청","처리 기간","근거"], D.items.filter(x=>x.group===g).map(x=>[x.name,x.target,x.who||"",x.office||"",x.time||"",x.law||""])); });
   }
-  if (D.tips) h += `<h3 class="cat">실무 팁</h3><div class="ptips">${D.tips.map(t=>`<div class="ptip"><b>${esc(t.title)}</b><p>${esc(t.body)}</p>${t.law?`<span class="small">${esc(t.law)}</span>`:""}</div>`).join("")}</div>`;
+  else if (permitSec==="tips") h += `<div class="ptips">${D.tips.map(t=>`<div class="ptip"><b>${esc(t.title)}</b><p>${esc(t.body)}</p>${t.law?`<span class="small">${esc(t.law)}</span>`:""}</div>`).join("")}</div>`;
   h += `<p class="small" style="margin-top:14px">기간은 실무 경험상 소요 기간이며 지자체·사업별로 다를 수 있습니다.</p>`;
   $("#view").innerHTML = h;
 }
@@ -580,6 +595,8 @@ function importBackup(d){
 /* ---------- 이벤트 ---------- */
 document.addEventListener("click", e=>{
   const t=e.target;
+  const psb=t.closest("[data-psec]"); if (psb){ permitSec=psb.dataset.psec; permitGrp=""; renderPermit(); const nav=document.querySelector(".psub"); if (nav && window.scrollY > nav.offsetTop) window.scrollTo(0, Math.max(0, nav.offsetTop-120)); return; }
+  const pgb=t.closest("[data-pgrp]"); if (pgb){ permitGrp=pgb.dataset.pgrp; renderPermit(); return; }
   const thb=t.closest("[data-th]"); if (thb){ themeKey=thb.dataset.th; if (tab!=="theme") go("theme"); else { renderTheme(); } return; }
   const tb=t.closest("[data-tab]"); if (tb){ e.preventDefault(); go(tb.dataset.tab); return; }
   const ty=t.closest("[data-type]"); if (ty&&P()){ P().type=ty.dataset.type; write(cur,"update",{type:P().type}); render(); return; }
