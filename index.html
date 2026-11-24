@@ -195,8 +195,24 @@ footer{margin:34px 0 20px;color:var(--sub);font-size:12px;border-top:1px solid v
 .pstep .ptime{align-self:flex-start;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 7px}
 .pstep p{margin:2px 0 0;font-size:13px;color:var(--sub)}
 .ptable{min-width:620px}
+.ptable td.nw{white-space:nowrap}
+.ptable th{white-space:nowrap}
+a.lawref{color:var(--link);text-decoration:underline;text-decoration-color:color-mix(in srgb, var(--link) 40%, transparent);text-underline-offset:2px}
+a.lawref:hover{text-decoration-color:var(--link)}
+@media (max-width:640px){
+  .ptable{min-width:0}
+  .ptable, .ptable tbody, .ptable tr, .ptable td{display:block;width:100%}
+  .ptable tr:first-child{display:none}
+  .ptable tr{border-bottom:1px solid var(--line);padding:9px 0}
+  .ptable tr:last-child{border-bottom:0}
+  .ptable td, .ptable td.nw{border:0;padding:2px 12px;white-space:normal}
+  .ptable td::before{content:attr(data-label);display:inline-block;min-width:64px;margin-right:8px;font-size:12px;font-weight:700;color:var(--sub);vertical-align:top}
+  .ptable td:first-child{font-weight:700;font-size:14.5px;padding-bottom:4px}
+  .ptable td:first-child::before{display:none}
+}
 .psub{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--topH,56px) + 52px);z-index:3}
 @media (max-width:820px){ .psub{top:calc(env(safe-area-inset-top,0px) + 46px)} }
+@media (max-width:640px){ .psub{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:8px 10px} .psub::-webkit-scrollbar{display:none} .pchip{flex:0 0 auto;padding:5px 11px;font-size:13px} }
 .pchip{border:1px solid var(--line);border-radius:999px;padding:6px 13px;background:var(--surface2);cursor:pointer;font-size:13.5px;font-weight:600;color:var(--ink);font-family:var(--f-display)}
 .pchip:hover{border-color:var(--steel)}
 .pchip.on{background:var(--steel);border-color:var(--steel);color:var(--steel-ink)}
@@ -246,6 +262,7 @@ footer{margin:34px 0 20px;color:var(--sub);font-size:12px;border-top:1px solid v
 <script src="data/permit.js"></script>
 <script src="data/site.js"></script>
 <script src="data/site2.js"></script>
+<script src="data/site3.js"></script>
 <script src="data/status.js"></script>
 <script>
 (function(){
@@ -406,8 +423,8 @@ function renderHome(){
   <section class="sec"><h2>테마별 법규</h2><p>내화구조·방화구획처럼 건축법 주요 주제별로 핵심 기준과 관련 조문을 모았습니다.</p>
     <div class="thchips">${(window.THEMES||[]).map(x=>`<button class="thchip" data-th="${x.key}">${x.icon||""} ${esc(x.name)}</button>`).join("")}</div></section>
   <section class="sec"><h2>심의·평가 대상 한눈에</h2><p>일정에 큰 영향을 주는 심의·평가의 대상 규모와 시기입니다. 지자체 기준은 조례 개정 여부를 꼭 확인하세요.</p>
-    <div class="tablewrap"><table><tr><th>구분</th><th>대상 기준</th><th>시기</th><th>근거</th></tr>
-    ${RT.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.base)}</td><td style="white-space:nowrap">${esc(r.when)}</td><td class="small">${esc(r.law)}</td></tr>`).join("")}</table></div></section>
+    <div class="tablewrap"><table class="ptable"><tr><th>구분</th><th>대상 기준</th><th>시기</th><th>근거</th></tr>
+    ${RT.map(r=>`<tr><td data-label="구분"><b>${esc(r.name)}</b></td><td data-label="대상 기준">${esc(r.base)}</td><td data-label="시기" class="nw">${esc(r.when)}</td><td data-label="근거" class="small">${linkLaws(r.law)}</td></tr>`).join("")}</table></div></section>
 
   <section class="sec cols">
     <div><h2>최근 시행·개정 법령</h2><p>${STATUS?`${esc(STATUS.checkedAt)} 국가법령정보센터 기준`:"개정정보 없음"}</p>
@@ -456,10 +473,22 @@ function itemHtml(it,p){
       ${editable?`<button class="btn sm" data-edit="${it.id}">수정</button><button class="btn sm danger" data-delc="${it.id}">삭제</button>`:""}</div>
       <textarea class="memo" data-memo="${it.id}" rows="1" placeholder="검토 메모 (도면번호, 협의 결과, 담당자 등)">${esc(r.memo||"")}</textarea></div></div>`;
 }
+const LAW_ALIAS = {"국토계획법":"국토의 계획 및 이용에 관한 법률","소방시설법":"소방시설 설치 및 관리에 관한 법률","산업집적법":"산업집적활성화 및 공장설립에 관한 법률","녹색건축물법":"녹색건축물 조성 지원법","건설폐기물법":"건설폐기물의 재활용촉진에 관한 법률"};
+const EXTRA_LAWS = ["항만법","원자력안전법","공항시설법","건설근로자의 고용개선 등에 관한 법률","토양환경보전법","건설폐기물의 재활용촉진에 관한 법률","승강기 안전관리법","전기안전관리법","도시교통정비 촉진법","경관법","화학물질관리법","물환경보전법","환경영향평가법","고압가스 안전관리법","위험물안전관리법","정보통신공사업법","소방시설공사업법","건축물관리법","산업안전보건법","녹색건축물 조성 지원법","대기환경보전법","재생에너지 개발ㆍ이용ㆍ보급 촉진법","산업집적활성화 및 공장설립에 관한 법률","지하안전관리에 관한 특별법"];
+let LAWRE = null;
+function linkLaws(s){
+  const txt = esc(s||"");
+  if (!LAWRE){
+    const names = new Set([...lawNames(), ...EXTRA_LAWS, ...Object.keys(LAW_ALIAS)]);
+    const arr = [...names].filter(Boolean).sort((a,b)=>b.length-a.length).map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));
+    LAWRE = new RegExp("(" + arr.join("|") + ")(\\s*(제\\d+조(?:의\\d+)?))?", "g");
+  }
+  return txt.replace(LAWRE, (m, name, _sp, jo) => `<a class="lawref" target="_blank" rel="noopener" href="${lawUrl(LAW_ALIAS[name]||name, jo||"")}">${m}</a>`);
+}
 let permitSec = "flow", permitGrp = "";
 function renderPermit(){
   const D = window.PERMIT || {};
-  const tbl = (head, rows) => `<div class="tablewrap"><table class="ptable"><tr>${head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div>`;
+  const tbl = (head, rows, opt) => { opt = opt || {}; return `<div class="tablewrap"><table class="ptable"><tr>${head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${rows.map(r=>`<tr>${r.map((c,i)=>`<td data-label="${esc(head[i])}"${(opt.nw||[]).includes(i)?' class="nw"':""}>${(opt.link||[]).includes(i)?linkLaws(c):esc(c)}</td>`).join("")}</tr>`).join("")}</table></div>`; };
   const SECS = [["flow","업무 흐름도"],["parallel","병행 심의·협의"],["depts","협의 부서"],["docs","준비 서류"],["struct","구조심의 절차"],["items","인허가 항목"],["tips","실무 팁"]].filter(s => D[s[0]] && D[s[0]].length);
   if (!SECS.some(s=>s[0]===permitSec)) permitSec = SECS.length ? SECS[0][0] : "";
   let h = `<div class="shead"><div><h2>인허가 업무</h2><p>${esc(D.lead||"")}</p></div></div>
@@ -468,18 +497,18 @@ function renderPermit(){
   h += `<h3 class="cat">${esc(title)}</h3>`;
   if (permitSec==="flow") h += `<div class="pflow">${D.flow.map((s,i)=>`<div class="pstep${s.kind?" "+s.kind:""}"><span class="pno">${s.no||("STEP "+(i+1))}</span><b>${esc(s.name)}</b>${s.time?`<span class="ptime">${esc(s.time)}</span>`:""}<p>${esc(s.desc||"")}</p></div>`).join("")}</div>
     <p class="small" style="margin-top:10px">점선 테두리는 대상일 때만 진행하는 단계입니다. 각 꼭지는 위 메뉴에서 바로 볼 수 있습니다.</p>`;
-  else if (permitSec==="parallel") h += tbl(["구분","대상","기간","언제까지","근거"], D.parallel.map(x=>[x.name,x.target,x.time,x.when,x.law]));
-  else if (permitSec==="depts") h += tbl(["협의 부서","검토 내용","준비 서류"], D.depts.map(x=>[x.dept,x.check,x.docs]));
-  else if (permitSec==="docs") h += tbl(["단계","협의 부서","서류","내용"], D.docs.map(x=>[x.stage,x.dept,x.doc,x.note]));
-  else if (permitSec==="struct") h += tbl(["업무","서류","내용"], D.struct.map(x=>[x.step,x.doc,x.note]));
+  else if (permitSec==="parallel") h += tbl(["구분","대상","기간","언제까지","근거"], D.parallel.map(x=>[x.name,x.target,x.time,x.when,x.law]), {nw:[0,2,3], link:[4]});
+  else if (permitSec==="depts") h += (D.deptNote?`<p class="small" style="margin:0 0 8px">${esc(D.deptNote)}</p>`:"") + tbl(["기관","담당 부서","검토 내용","준비 서류"], D.depts.map(x=>[x.org||"-",x.dept,x.check,x.docs]), {nw:[0]});
+  else if (permitSec==="docs") h += tbl(["단계","협의 부서","서류","내용"], D.docs.map(x=>[x.stage,x.dept,x.doc,x.note]), {nw:[0], link:[3]});
+  else if (permitSec==="struct") h += tbl(["업무","서류","내용"], D.struct.map(x=>[x.step,x.doc,x.note]), {nw:[0], link:[2]});
   else if (permitSec==="items"){
     const groups=[]; D.items.forEach(x=>{ if(!groups.includes(x.group)) groups.push(x.group); });
     if (permitGrp && !groups.includes(permitGrp)) permitGrp = "";
     h += `<div class="thchips" style="margin-top:0">${["", ...groups].map(g=>`<button class="thchip ${permitGrp===g?"on":""}" data-pgrp="${esc(g)}">${g?esc(g):"전체"} <span class="cnt">${g?D.items.filter(x=>x.group===g).length:D.items.length}</span></button>`).join("")}</div>
-      <p class="small" style="margin:8px 0 0">사업 규모에 따라 필요한 인허가를 판단할 때 참고하세요. 기준값은 개정될 수 있으니 근거 법령으로 확인하세요.</p>`;
-    (permitGrp ? [permitGrp] : groups).forEach(g=>{ h += `<p class="small" style="margin:14px 0 4px"><b>${esc(g)}</b></p>` + tbl(["인허가 항목","대상 기준","수행","관련 관청","처리 기간","근거"], D.items.filter(x=>x.group===g).map(x=>[x.name,x.target,x.who||"",x.office||"",x.time||"",x.law||""])); });
+      <p class="small" style="margin:8px 0 0">사업 규모에 따라 필요한 인허가를 판단할 때 참고하세요. 근거 법령을 누르면 국가법령정보센터 현행 조문이 열립니다.</p>`;
+    (permitGrp ? [permitGrp] : groups).forEach(g=>{ h += `<p class="small" style="margin:14px 0 4px"><b>${esc(g)}</b></p>` + tbl(["인허가 항목","대상 기준","수행","관련 관청","제출 시기","근거"], D.items.filter(x=>x.group===g).map(x=>[x.name,x.target,x.who||"",x.office||"",x.time||"",x.law||""]), {nw:[2], link:[5]}); });
   }
-  else if (permitSec==="tips") h += `<div class="ptips">${D.tips.map(t=>`<div class="ptip"><b>${esc(t.title)}</b><p>${esc(t.body)}</p>${t.law?`<span class="small">${esc(t.law)}</span>`:""}</div>`).join("")}</div>`;
+  else if (permitSec==="tips") h += `<div class="ptips">${D.tips.map(t=>`<div class="ptip"><b>${esc(t.title)}</b><p>${linkLaws(t.body)}</p>${t.law?`<span class="small">${linkLaws(t.law)}</span>`:""}</div>`).join("")}</div>`;
   h += `<p class="small" style="margin-top:14px">기간은 실무 경험상 소요 기간이며 지자체·사업별로 다를 수 있습니다.</p>`;
   $("#view").innerHTML = h;
 }
@@ -495,7 +524,7 @@ function renderTheme(){
     <article class="theme">
       <h2>${th.icon||""} ${esc(th.name)}</h2>
       <p class="lead">${esc(th.lead||"")}</p>
-      <dl class="rules">${(th.rules||[]).map(r=>`<dt>${esc(r.h)}</dt><dd>${esc(r.t)}</dd>`).join("")}</dl>
+      <dl class="rules">${(th.rules||[]).map(r=>`<dt>${esc(r.h)}</dt><dd>${linkLaws(r.t)}</dd>`).join("")}</dl>
       ${th.table?`<div class="tablewrap"><table class="thtable"><tr>${th.table.head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${th.table.rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="n">${esc(c)}</td>`:`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div>`:""}
       ${th.plant?`<div class="p" style="margin-top:12px"><b>플랜트</b>${esc(th.plant)}</div>`:""}
       <h3 class="cat">관련 조문</h3>
