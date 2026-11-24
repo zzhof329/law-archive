@@ -185,7 +185,42 @@ footer{margin:34px 0 20px;color:var(--sub);font-size:12px;border-top:1px solid v
 .rules{display:grid;grid-template-columns:150px minmax(0,1fr);gap:9px 16px;margin:0}
 .rules dt{font-weight:700;color:var(--accent);font-size:14px}
 .rules dd{margin:0;font-size:14.5px}
-.thtable{min-width:420px}
+.thtable{min-width:560px}
+.thtable td{font-size:14px;line-height:1.6}
+.thtable td:first-child{white-space:nowrap;font-weight:700}
+.thfig{margin:4px 0 16px;padding:14px 12px 10px;background:var(--surface2);border:1px solid var(--line);border-radius:10px}
+.thfig svg{display:block;width:100%;max-width:620px;height:auto;margin:0 auto}
+.thfig .swipe{display:none;font-size:12px;color:var(--sub);margin-bottom:6px;position:sticky;left:0}
+@media (max-width:640px){ .thfig{overflow-x:auto;-webkit-overflow-scrolling:touch} .thfig svg{width:480px;max-width:none} .thfig figcaption{text-align:left} .thfig .swipe{display:block} }
+.thfig figcaption{font-size:12px;color:var(--sub);margin-top:8px;text-align:center}
+.fg{font-family:var(--f-body)}
+.fg text{fill:var(--ink);font-size:13px}
+.fg .b{font-weight:700;font-size:14px}
+.fg .s{fill:var(--sub);font-size:12px}
+.fg .w{fill:#fff}
+.fg .act{fill:var(--accent)}
+.fg .okt{fill:var(--ok)}
+.fg .mk{fill:var(--sub)}
+.fg .ln{stroke:var(--sub);stroke-width:1.5;fill:none}
+.fg .ln2{stroke:var(--ink);stroke-width:2.5;fill:none}
+.fg .thin{stroke-width:1}
+.fg .dash{stroke-dasharray:5 4}
+.fg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.fg .box2{fill:var(--surface);stroke:var(--sub);stroke-width:1.5}
+.fg .stb{fill:var(--steel);stroke:var(--link);stroke-width:1.5}
+.fg .acb{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.fg .okb{fill:var(--okbg);stroke:var(--ok);stroke-width:1.5}
+.fg .grn{fill:var(--okbg);stroke:var(--ok);stroke-width:1.2}
+.fg .acf{fill:var(--accent)}
+.fg .acl{stroke:var(--accent)}
+.fg .wall{stroke:var(--accent);stroke-width:5}
+.fg .frame{stroke:var(--link);stroke-width:4;fill:none}
+.fg .door{fill:var(--surface);stroke:var(--link);stroke-width:1.5}
+.fg .obj{fill:var(--surface);stroke:var(--link);stroke-width:1.5}
+.fg .pan{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.2}
+.fg .path{stroke:var(--accent);stroke-width:2.5;stroke-dasharray:6 4;fill:none}
+.fg .road{fill:var(--nabg)}
+.fg .open{fill:var(--bg);stroke:var(--sub);stroke-width:1.2;stroke-dasharray:4 3}
 @media (max-width:640px){ .rules{grid-template-columns:minmax(0,1fr);gap:2px} .rules dd{margin-bottom:8px} }.pflow{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:14px;counter-reset:ps}
 .pstep{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--steel);border-radius:10px;padding:12px 13px;display:flex;flex-direction:column;gap:4px}
 .pstep.opt{border-top-color:var(--accent);border-style:dashed;border-top-style:solid}
@@ -264,6 +299,7 @@ a.lawref:hover{text-decoration-color:var(--link)}
 <script src="data/site2.js"></script>
 <script src="data/site3.js"></script>
 <script src="data/site4.js"></script>
+<script src="data/figures.js"></script>
 <script src="data/status.js"></script>
 <script>
 (function(){
@@ -525,8 +561,9 @@ function renderTheme(){
     <article class="theme">
       <h2>${th.icon||""} ${esc(th.name)}</h2>
       <p class="lead">${esc(th.lead||"")}</p>
+      ${th.fig?`<figure class="thfig"><span class="swipe">↔ 좌우로 밀어서 보기</span>${th.fig.svg}<figcaption>${esc(th.fig.cap||"")} · 이해를 돕기 위한 개념도이며, 수치는 아래 기준과 원문으로 확인하세요.</figcaption></figure>`:""}
       <dl class="rules">${(th.rules||[]).map(r=>`<dt>${esc(r.h)}</dt><dd>${linkLaws(r.t)}</dd>`).join("")}</dl>
-      ${th.table?`<div class="tablewrap"><table class="thtable"><tr>${th.table.head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${th.table.rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="n">${esc(c)}</td>`:`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div>`:""}
+      ${th.table?`<div class="tablewrap"><table class="ptable thtable"><tr>${th.table.head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${th.table.rows.map(r=>`<tr>${r.map((c,i)=>`<td data-label="${esc(th.table.head[i])}">${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div>`:""}
       ${th.plant?`<div class="p" style="margin-top:12px"><b>플랜트</b>${esc(th.plant)}</div>`:""}
       <h3 class="cat">관련 조문</h3>
       <div class="quick">${(th.laws||[]).map(l=>`<a class="law" target="_blank" rel="noopener" href="${lawUrl(l[0],l[1])}" title="${esc(l[0])}">📖 ${esc(l[2]||l[0])}${l[1]?" · "+esc(l[1]):""}</a>${badges(l[0])}`).join("")}
