@@ -302,6 +302,7 @@ a.lawref:hover{text-decoration-color:var(--link)}
 <script src="data/figures.js"></script>
 <script src="data/themes_more.js"></script>
 <script src="data/figures2.js"></script>
+<script src="data/site5.js"></script>
 <script src="data/status.js"></script>
 <script>
 (function(){
@@ -514,15 +515,28 @@ function itemHtml(it,p){
 }
 const LAW_ALIAS = {"국토계획법":"국토의 계획 및 이용에 관한 법률","소방시설법":"소방시설 설치 및 관리에 관한 법률","산업집적법":"산업집적활성화 및 공장설립에 관한 법률","녹색건축물법":"녹색건축물 조성 지원법","건설폐기물법":"건설폐기물의 재활용촉진에 관한 법률"};
 const EXTRA_LAWS = ["항만법","원자력안전법","공항시설법","건설근로자의 고용개선 등에 관한 법률","토양환경보전법","건설폐기물의 재활용촉진에 관한 법률","승강기 안전관리법","전기안전관리법","도시교통정비 촉진법","경관법","화학물질관리법","물환경보전법","환경영향평가법","고압가스 안전관리법","위험물안전관리법","정보통신공사업법","소방시설공사업법","건축물관리법","산업안전보건법","녹색건축물 조성 지원법","대기환경보전법","재생에너지 개발ㆍ이용ㆍ보급 촉진법","산업집적활성화 및 공장설립에 관한 법률","지하안전관리에 관한 특별법","석면안전관리법","건설기술 진흥법","전기공사업법","군사기지 및 군사시설 보호법","자전거 이용 활성화에 관한 법률","화재의 예방 및 안전관리에 관한 법률","소방시설 설치 및 관리에 관한 법률","건축법","산업입지 및 개발에 관한 법률"];
-let LAWRE = null;
-function linkLaws(s){
+Object.assign(LAW_ALIAS, {"피난·방화규칙":"건축물의 피난ㆍ방화구조 등의 기준에 관한 규칙","피난ㆍ방화규칙":"건축물의 피난ㆍ방화구조 등의 기준에 관한 규칙","화재예방법":"화재의 예방 및 안전관리에 관한 법률","산업입지법":"산업입지 및 개발에 관한 법률","산안법":"산업안전보건법","녹색건축법":"녹색건축물 조성 지원법"});
+let LAWRE = null, ADM = null;
+const lawRoot = n => (n||"").replace(/\s*(시행령|시행규칙)$/, "");
+/* 법령명·약칭 + (시행령|시행규칙) + 제N조, 단독 '시행령 제N조', 단독 '제N조'(앞에 나온 법령 기준) 를 국가법령정보센터 링크로 */
+function linkLaws(s, base, bareOk){
   const txt = esc(s||"");
   if (!LAWRE){
     const names = new Set([...lawNames(), ...EXTRA_LAWS, ...Object.keys(LAW_ALIAS)]);
     const arr = [...names].filter(Boolean).sort((a,b)=>b.length-a.length).map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));
-    LAWRE = new RegExp("(" + arr.join("|") + ")(\\s*(제\\d+조(?:의\\d+)?))?", "g");
+    const JO = "제\\d+조(?:의\\d+)?";
+    LAWRE = new RegExp("(" + arr.join("|") + ")(?:\\s*(시행령|시행규칙))?(?:\\s*(" + JO + "))?|(시행령|시행규칙)\\s*(" + JO + ")|(" + JO + ")", "g");
+    ADM = new Set(allItems().filter(it=>it.kind==="행정규칙").map(it=>it.law));
   }
-  return txt.replace(LAWRE, (m, name, _sp, jo) => `<a class="lawref" target="_blank" rel="noopener" href="${lawUrl(LAW_ALIAS[name]||name, jo||"")}">${m}</a>`);
+  let last = base || "", root = lawRoot(base || ""), lastEnd = -1;
+  return txt.replace(LAWRE, (m, name, sub, jo, sub2, jo2, jo3, off) => {
+    let law, j = "";
+    if (name){ let full = LAW_ALIAS[name] || name; if (sub && !/(시행령|시행규칙)$/.test(full)) full += " " + sub; law = full; j = jo || ""; last = full; root = lawRoot(full); lastEnd = off + m.length; }
+    else if (sub2){ const r0 = /(규칙|기준)$/.test(root) ? lawRoot(base || "") : root; if (!r0) return m; law = r0 + " " + sub2; j = jo2; last = law; lastEnd = off + m.length; }
+    else { const gap = lastEnd < 0 ? null : txt.slice(lastEnd, off).replace(/제\d+[항호목]/g, "").replace(/[\s·ㆍ,및()]/g, ""); if (!last || (gap === null ? !bareOk : gap !== "")) return m; law = last; j = jo3; }
+    lastEnd = off + m.length;
+    return `<a class="lawref" target="_blank" rel="noopener" href="${lawUrl(law, j, ADM.has(law) ? "행정규칙" : undefined)}">${m}</a>`;
+  });
 }
 let permitSec = "flow", permitGrp = "";
 function renderPermit(){
@@ -556,18 +570,18 @@ let themeKey = "";
 function renderTheme(){
   const TH = window.THEMES||[]; const p=P();
   if (!TH.length){ $("#view").innerHTML = `<div class="empty">테마 데이터가 없습니다.</div>`; return; }
-  const th = TH.find(x=>x.key===themeKey) || TH[0]; themeKey = th.key;
+  const th = TH.find(x=>x.key===themeKey) || TH[0]; themeKey = th.key; const tb = th.base || lawRoot((th.laws && th.laws[0] && th.laws[0][0]) || ""); const cell = (c, b, ok) => linkLaws(c, b, ok).replace(/\n/g, "<br>");
   const rel = allItems().filter(it => (th.match||[]).some(m => it.law===m[0] && (m.length<2 || (it.jo||"")===m[1])));
   let h = `<div class="shead"><div><h2>테마별 법규</h2><p>건축법 주요 주제별로 핵심 기준, 관련 조문, 관련 체크 항목을 모았습니다.</p></div></div>
     <div class="thchips">${TH.map(x=>`<button class="thchip ${x.key===th.key?"on":""}" data-th="${x.key}">${x.icon||""} ${esc(x.name)}</button>`).join("")}</div>
     <article class="theme">
       <h2>${th.icon||""} ${esc(th.name)}</h2>
-      <p class="lead">${esc(th.lead||"")}</p>
+      <p class="lead">${linkLaws(th.lead||"", tb)}</p>
       ${th.fig?`<figure class="thfig"><span class="swipe">↔ 좌우로 밀어서 보기</span>${th.fig.svg}<figcaption>${esc(th.fig.cap||"")} · 이해를 돕기 위한 개념도이며, 수치는 아래 기준과 원문으로 확인하세요.</figcaption></figure>`:""}
-      <dl class="rules">${(th.rules||[]).map(r=>`<dt>${esc(r.h)}</dt><dd>${linkLaws(r.t)}</dd>`).join("")}</dl>
-      ${th.table?`<div class="tablewrap"><table class="ptable thtable"><tr>${th.table.head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${th.table.rows.map(r=>`<tr>${r.map((c,i)=>`<td data-label="${esc(th.table.head[i])}">${esc(c)}</td>`).join("")}</tr>`).join("")}</table></div>`:""}
-      ${(th.blocks||[]).map(b=>`<h3 class="cat">${esc(b.title||"")}</h3>${b.note?`<p class="small" style="margin:0 0 6px">${esc(b.note)}</p>`:""}${b.fig?`<figure class="thfig"><span class="swipe">↔ 좌우로 밀어서 보기</span>${b.fig}</figure>`:""}${b.table?`<div class="tablewrap"><table class="ptable thtable"><tr>${b.table.head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${b.table.rows.map(r=>`<tr>${r.map((c,i)=>`<td data-label="${esc(b.table.head[i])}">${linkLaws(c)}</td>`).join("")}</tr>`).join("")}</table></div>`:""}`).join("")}
-      ${th.plant?`<div class="p" style="margin-top:12px"><b>플랜트</b>${esc(th.plant)}</div>`:""}
+      <dl class="rules">${(th.rules||[]).map(r=>`<dt>${esc(r.h)}</dt><dd>${linkLaws(r.t, tb)}</dd>`).join("")}</dl>
+      ${th.table?`<div class="tablewrap"><table class="ptable thtable"><tr>${th.table.head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${th.table.rows.map(r=>`<tr>${r.map((c,i)=>`<td data-label="${esc(th.table.head[i])}">${cell(c, tb)}</td>`).join("")}</tr>`).join("")}</table></div>`:""}
+      ${(th.blocks||[]).map(b=>`<h3 class="cat">${esc(b.title||"")}</h3>${b.note?`<p class="small" style="margin:0 0 6px">${linkLaws(b.note, b.base||tb)}</p>`:""}${b.fig?`<figure class="thfig"><span class="swipe">↔ 좌우로 밀어서 보기</span>${b.fig}</figure>`:""}${b.table?`<div class="tablewrap"><table class="ptable thtable"><tr>${b.table.head.map(x=>`<th>${esc(x)}</th>`).join("")}</tr>${b.table.rows.map(r=>`<tr>${r.map((c,i)=>`<td data-label="${esc(b.table.head[i])}">${cell(c, b.base||tb, !!b.base)}</td>`).join("")}</tr>`).join("")}</table></div>`:""}`).join("")}
+      ${th.plant?`<div class="p" style="margin-top:12px"><b>플랜트</b>${linkLaws(th.plant, tb)}</div>`:""}
       <h3 class="cat">관련 조문</h3>
       <div class="quick">${(th.laws||[]).map(l=>`<a class="law" target="_blank" rel="noopener" href="${lawUrl(l[0],l[1])}" title="${esc(l[0])}">📖 ${esc(l[2]||l[0])}${l[1]?" · "+esc(l[1]):""}</a>${badges(l[0])}`).join("")}
       ${(th.extra||[]).map(x=>`<a class="law ord" target="_blank" rel="noopener" href="${esc(x.url)}">${esc(x.label)}</a>`).join("")}</div>
